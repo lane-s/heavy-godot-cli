@@ -1,8 +1,0 @@
-MANIFEST.in
-README.rst
-setup.cfg
-heavygodot/__init__.py
-heavygodot/cli.py
-heavygodot/commands/__init__.py
-heavygodot/commands/base.py
-heavygodot/commands/create_module.py
