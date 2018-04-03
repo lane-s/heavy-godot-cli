@@ -2,19 +2,23 @@
 heavy-godot
  
 Usage:
-  heavy-godot create_module [ZIPPED_HEAVY_SOURCE]
+  heavy-godot wrap [ZIPPED_HEAVY_SOURCE]
   heavy-godot -h | --help
   heavy-godot --version
+  heavy-godot --clean
  
 Options:
   -h --help                         Show this screen.
   --version                         Show version.
+  --clean                           Remove the input file when finished
+
  
 Examples:
-  heavy-godot hello
+  heavy-godot wrap My_Patch.zip --clean
  
 Help:
   For help using this tool, please open an issue on the Github repository:
+  https://github.com/lane-s/heavy-godot-cli
 """
  
  
