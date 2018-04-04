@@ -4,4 +4,4 @@ Import('env')
 module_env = env.Clone();
 module_env.add_source_files(env.modules_sources,"*.cpp")
 module_env.add_source_files(env.modules_sources,"*.c")
-module_env.Append(CXXFLAGS=['-std=c11','-std=c++11','-DNDEBUG','-ffast-math','-DHV_SIMD_NONE'])
+module_env.Append(CXXFLAGS=['-std=c11','-std=c++11','-DNDEBUG','-ffast-math'])

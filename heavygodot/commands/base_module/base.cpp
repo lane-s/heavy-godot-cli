@@ -1,7 +1,8 @@
 #include "$(module_name).h"
+#include <iostream>
 
 $(audio_stream_classname)::$(audio_stream_classname)()
-    : mix_rate(44100), stereo(false), hz(639){
+    : mix_rate(44100) {
         heavy_context = new $(patch_classname)(mix_rate);
 }
 
@@ -35,10 +36,16 @@ void $(audio_stream_classname)::_bind_methods(){
     $(in_event_binds)
 }
 
+$(audio_stream_classname)::~$(audio_stream_classname)(){
+    delete heavy_context;
+}
+
 $(audio_playback_classname)::$(audio_playback_classname)(): active(false){
+    buffer_size = BLOCK_SIZE * sizeof(float)
+
     AudioServer::get_singleton()->lock();
-    pcm_buffer = AudioServer::get_singleton()->audio_data_alloc(PCM_BUFFER_SIZE);
-    zeromem(pcm_buffer, PCM_BUFFER_SIZE);
+    pcm_buffer = AudioServer::get_singleton()->audio_data_alloc(buffer_size);
+    zeromem(pcm_buffer, buffer_size);
     AudioServer::get_singleton()->unlock();
 }
 
@@ -61,11 +68,14 @@ void $(audio_playback_classname)::seek(float p_time){
 }
 
 void $(audio_playback_classname)::mix(AudioFrame *p_buffer, float p_rate, int p_frames){
-    ERR_FAIL_COND(!active);
     if(!active){
+        for(int i = 0; i < p_frames; i++){
+            p_buffer[i] = AudioFrame(0, 0);
+        }
         return;
     }
-    zeromem(pcm_buffer, PCM_BUFFER_SIZE);
+
+    zeromem(pcm_buffer, buffer_size);
     float * buf = (float *)pcm_buffer;
     base->process_patch(buf, p_frames);
 
@@ -89,4 +99,7 @@ float $(audio_playback_classname)::get_length() const {
 
 bool $(audio_playback_classname)::is_playing() const {
     return active;
+}
+
+$(audio_playback_classname)::~$(audio_playback_classname)(){
 }

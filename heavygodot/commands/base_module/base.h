@@ -13,8 +13,6 @@ private:
     friend class $(audio_playback_classname);
     uint64_t pos;
     int mix_rate;
-    bool stereo;
-    int hz;
     HeavyContextInterface* heavy_context;
 public:
     $(in_event_method_declarations)
@@ -25,6 +23,7 @@ public:
     void process_patch(float* pcm_buf, int frames);
     virtual float get_length() const { return 0; }
     $(audio_stream_classname)();
+    ~$(audio_stream_classname)();
 protected:
     static void _bind_methods();
 };
@@ -34,7 +33,7 @@ class $(audio_playback_classname) : public AudioStreamPlayback {
     friend class $(audio_stream_classname);
 private:
     enum{
-        PCM_BUFFER_SIZE = 4096
+        BLOCK_SIZE = 1024
     };
     enum {
         MIX_FRAC_BITS = 13,
@@ -44,6 +43,7 @@ private:
     void * pcm_buffer;
     Ref<$(audio_stream_classname)> base;
     bool active;
+    uint32_t buffer_size
 public:
     virtual void start(float p_from_pos = 0.0);
     virtual void stop();
@@ -54,6 +54,7 @@ public:
     virtual void mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames);
     virtual float get_length() const; 
     $(audio_playback_classname)();
+    ~$(audio_playback_classname)();
 };
 
 #endif

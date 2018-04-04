@@ -17,7 +17,10 @@ class Wrap(Base):
     """Create a godot module from the supplied heavy source files"""
     def run(self):
         self.initialize()
-        self.extract_heavy_source()
+
+        if not self.extract_heavy_source():
+            return
+
         self.copy_base_module()
         self.analyze_heavy_source()
         self.transform_base_module()
@@ -51,10 +54,10 @@ class Wrap(Base):
             zip_ref = zipfile.ZipFile(self.zipfile_path, 'r')
         except FileNotFoundError:
             print(self.FILE_NOT_FOUND+" "+self.PLEASE_INPUT_ZIP_FILE)
-            return
+            return False
         except zipfile.BadZipFile:
             print(self.BAD_ZIP_FILE+" "+self.PLEASE_INPUT_ZIP_FILE)
-            return
+            return False
         except:
             print(self.UNEXPECTED_ERROR, sys.exec_info()[0])
             return
@@ -62,12 +65,13 @@ class Wrap(Base):
         self.module_dir = os.path.join(os.getcwd(), self.DEFAULT_MODULE_DIR_NAME)
         if os.path.exists(self.module_dir):
             print(self.TEMP_EXISTS)
-            return
+            return False
 
         os.makedirs(self.module_dir)
 
         zip_ref.extractall(self.module_dir)
         zip_ref.close()
+        return True
     
     """ Copy all of the base module code into the new module directory """
     def copy_base_module(self):
@@ -124,7 +128,7 @@ class Wrap(Base):
 
         in_event_method_declarations = []
         in_event_method_definitions = []
-        in_event_binds = []
+        in_event_binds = ['\n']
 
         for in_event in in_events:
             self.variables['method_name'] = 'trigger_'+in_event.lower()+"_event"
@@ -179,7 +183,23 @@ class Wrap(Base):
 
     """ Transform the base module code into a wrapper for the supplied heavy source code by resolving all variables in the base module and renaming base files"""
     def transform_base_module(self):
+        self.resolve_all_variables()
         self.rename_files()
+
+    def resolve_all_variables(self):
+        wrapper_file_names = ['base.cpp', 'base.h', 'register_types.h', 'register_types.cpp']
+
+        for wrapper_file_name in wrapper_file_names:
+            file_path = os.path.join(self.module_dir, wrapper_file_name)
+            wrapper_file = open(file_path, 'r+')
+
+            resolved_text = self.resolve_variables(wrapper_file)
+
+            wrapper_file.seek(0, 0)
+            wrapper_file.write(resolved_text)            
+            wrapper_file.truncate(len(resolved_text))
+            wrapper_file.close()
+
 
     def rename_files(self):
         new_module_dir = os.path.join(self.module_dir, os.path.join(os.pardir, self.variables['module_name']))
@@ -219,7 +239,7 @@ class Wrap(Base):
     def finish(self):
         if self.options['--clean']:
             os.remove(self.zipfile_path)
-        print("Module generation complete. The heavy patch '"+"x"+"' has been wrapped up as the Godot module '"+"y"+"'")
+        print("Module generation complete. The heavy patch '"+self.variables['patch_classname']+"' has been wrapped up as the Godot module '"+self.variables['module_name']+"'")
 
     """ Remove the temporary folder if the wrap failed prematurely """
     def cleanup_temp(self):

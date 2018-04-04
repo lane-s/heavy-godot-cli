@@ -1,2 +1,1 @@
-
-void $(method_name);
+    void $(method_name)();
