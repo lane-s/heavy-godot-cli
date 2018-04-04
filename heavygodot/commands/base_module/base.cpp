@@ -15,7 +15,7 @@ String $(audio_stream_classname)::get_stream_name() const {
     return "$(patch_classname)";
 }
 
-$(in_event_methods)
+$(in_event_method_definitions)
 
 void $(audio_stream_classname)::reset(){
     set_position(0);

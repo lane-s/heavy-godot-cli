@@ -17,7 +17,7 @@ private:
     int hz;
     HeavyContextInterface* heavy_context;
 public:
-    void start_event();
+    $(in_event_method_declarations)
     void reset();
     void set_position(uint64_t pos);
     virtual Ref<AudioStreamPlayback> instance_playback();

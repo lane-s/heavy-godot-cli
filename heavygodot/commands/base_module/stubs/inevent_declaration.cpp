@@ -1,0 +1,2 @@
+
+void $(method_name);

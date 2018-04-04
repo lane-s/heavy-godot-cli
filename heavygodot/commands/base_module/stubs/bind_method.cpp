@@ -1,0 +1,1 @@
+ClassDB::bind_method(D_METHOD("$(method_name)"), &$(audio_stream_classname)::$(method_name));

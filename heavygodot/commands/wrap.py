@@ -35,7 +35,6 @@ class Wrap(Base):
 
     def initialize(self):
         self.variables = defaultdict(str)
-        self.var_regex = "\$\((.*?)\)" #Match expressions like '$(var_name)'
 
         self.base_module_dir = os.path.join(os.path.dirname(__file__), self.BASE_MODULE_DIR_NAME)
         self.stubs_dir = os.path.join(self.base_module_dir, self.STUBS_DIR_NAME) 
@@ -81,7 +80,7 @@ class Wrap(Base):
     """ Analyze the heavy source code to find the values for all the variables we need to resolve in the base module code """
     def analyze_heavy_source(self):
         self.get_names_from_source()
-        self.generate_event_methods()
+        self.generate_in_event_methods()
         self.generate_parameter_control_methods()
         self.generate_documentation()
 
@@ -108,8 +107,67 @@ class Wrap(Base):
         self.variables['header_symbol'] = self.variables['module_name'].upper()+"_H"
 
     """ Generate code to pass events between the heavy patch and the Godot AudioStream """
-    def generate_event_methods(self):
-        pass
+    def generate_in_event_methods(self):
+        patch_header_path = os.path.join(self.module_dir, self.variables['patch_classname'] + '.hpp')
+        patch_header_file = open(patch_header_path, 'r')
+
+        in_events = self.get_enum_vals(patch_header_file, 'EventIn')
+
+        in_event_declaration_stub_path = os.path.join(self.stubs_dir, 'inevent_declaration.cpp')
+        in_event_declaration_stub_file = open(in_event_declaration_stub_path, 'r')
+
+        in_event_definition_stub_path = os.path.join(self.stubs_dir, 'inevent_definition.cpp')
+        in_event_definition_stub_file = open(in_event_definition_stub_path, 'r')
+
+        bind_method_stub_path = os.path.join(self.stubs_dir, 'bind_method.cpp')
+        bind_method_stub_file = open(bind_method_stub_path, 'r')
+
+        in_event_method_declarations = []
+        in_event_method_definitions = []
+        in_event_binds = []
+
+        for in_event in in_events:
+            self.variables['method_name'] = 'trigger_'+in_event.lower()+"_event"
+            self.variables['event_name'] = in_event
+            in_event_method_declarations.append(self.resolve_variables(in_event_declaration_stub_file))
+            in_event_method_definitions.append(self.resolve_variables(in_event_definition_stub_file))
+            in_event_binds.append(self.resolve_variables(bind_method_stub_file))
+
+        self.variables['in_event_method_declarations'] = '\n'.join(in_event_method_declarations)
+        self.variables['in_event_method_definitions'] = '\n'.join(in_event_method_definitions)
+        self.variables['in_event_binds'] = '\n'.join(in_event_binds)
+
+        patch_header_file.close()
+        in_event_declaration_stub_file.close()
+        in_event_definition_stub_file.close()
+            
+
+    """ Returns a list of possible values for the enum of the given name in the given file """
+    def get_enum_vals(self, file, enum_name):
+        vals = []
+
+        file.seek(0, 0)
+        lines = file.readlines()
+
+        enum_start_regex = re.compile('enum\s*' + enum_name + '\s*:\s*hv_uint32_t\s*\{') #Match line like 'enum ParameterIn : hv_uint32_t {'
+        enum_val_regex = re.compile('(.+?)\s*=\s*[A-F0-9x]+') #Match line like 'ENUM_NAME = 0xFFFFFF,'
+        enum_end_regex = re.compile('\}\s*;') #Match end of clause i.e. '};'
+
+        reading_enum = False
+
+        for line in lines:
+            if reading_enum:
+                if enum_end_regex.match(line.strip()) is not None:
+                    return vals
+                else:
+                    match = enum_val_regex.match(line.strip())
+                    if match is not None:
+                        vals.append(match.group(1))
+            elif enum_start_regex.match(line.strip()) is not None:
+                reading_enum = True
+                continue
+
+        return vals
 
     """ Generate code to expose heavy patch parameters through the Godot AudioStream """
     def generate_parameter_control_methods(self):
@@ -143,20 +201,19 @@ class Wrap(Base):
     """ Replace all of the expressions of the form $(var) with the value of var stored in the variables dictionary """
     def resolve_variables(self, input_file):
         resolved = []
+
+        input_file.seek(0, 0)
         lines = input_file.readlines()
 
+        var_regex = "\$\((.*?)\)" #Match expressions like '$(var_name)'
+        def var_repl(match):
+            return self.variables[match.group(1)]
+
         for i, line in enumerate(lines):
-            resolved_line = line
-            for match in re.finditer(self.var_regex, resolved_line):
-                var_name = match.group(1)
-                if var_name in self.variables:
-                    resolved_line[match.start(1):match.end(1)] = self.variables[var_name]
-                else:
-                    print("Unresolved variable $("+var_name+") in "+input_file.name+" at line "+str(i)) 
-            
+            resolved_line = re.sub(var_regex, var_repl, line)
             resolved.append(resolved_line)
         
-        return resolved
+        return '\n'.join(resolved)
 
     """ Cleanup and finish """
     def finish(self):
